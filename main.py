@@ -43,23 +43,37 @@ def parse_products(urls):
             break
 
         folder_id = soup.select_one('.car-header__titles h1').text.strip()
-        modification_id = soup.select_one('.car-header__kit').text.strip()
+        [modification_id,year] = soup.select_one('.car-header__kit').text.strip().split(',')
+        year = year.strip()
         images = soup.select_one('.car-body__image img').attrs['src']
+        body_type = 'Седан' if folder_id == 'Arrizo 8' else 'Кроссовер'
         vin = soup.select_one('.car-body__list .car-body__item:nth-of-type(6)  p b').text.strip()
         custom = soup.select_one('.car-body__list .car-body__item:nth-of-type(4)  p b').text.strip()
         color = soup.select_one('.car-body__list .car-body__item:nth-of-type(5)  p b').text.strip()
-
         availability = soup.select_one('.status-block__text').text.strip()
-        price = soup.select_one('.car-price .car-price__actual')
+        if soup.select_one('.car-price .car-price__actual') is None:
+            price = ""
+            currency=''
+        else:
+            [price,currency] = soup.select_one('.car-price .car-price__actual').text.rsplit(' ', maxsplit=1)
         item = {
+            'mark_id': 'Chery',
             'folder_id': folder_id,
             'modification_id': modification_id,
             'url': url,
             'images': images,
+            'body_type':body_type,
             'color':color,
+            'availability': availability,
+            'custom': custom,
+            'year': year,
+            'price':price,
+            'currency':currency,
             'vin':vin,
-            'custom':custom,
-            'availability':availability,
+            'owners_number': 'Не было владельцев',
+
+
+
         }
         data.append(item)
 
@@ -97,14 +111,20 @@ def dump_to_xlsx(filename, data):
             ws.write_string(0, col, h, cell_format=bold)
 
         for row, item in enumerate(data, start=1):
-            ws.write_string(row, 0, item['folder_id'])
-            ws.write_string(row, 1, item['modification_id'])
-            ws.write_string(row, 2, item['url'])
-            ws.write_string(row, 3, item['images'])
-            ws.write_string(row, 4, item['color'])
-            ws.write_string(row, 5, item['vin'])
-            ws.write_string(row, 6, item['custom'])
+            ws.write_string(row, 0, item['mark_id'])
+            ws.write_string(row, 1, item['folder_id'])
+            ws.write_string(row, 2, item['modification_id'])
+            ws.write_string(row, 3, item['url'])
+            ws.write_string(row, 4, item['images'])
+            ws.write_string(row, 5, item['body_type'])
+            ws.write_string(row, 6, item['color'])
             ws.write_string(row, 7, item['availability'])
+            ws.write_string(row, 8, item['custom'])
+            ws.write_string(row, 9, item['year'])
+            ws.write_string(row, 10, item['price'])
+            ws.write_string(row, 11, item['currency'])
+            ws.write_string(row, 12, item['vin'])
+            ws.write_string(row, 13, item['owners_number'])
 
 def dump_to_xml(filename, data):
     f = open(filename, "w",encoding='utf-8')
@@ -117,21 +137,14 @@ def dump_to_xml(filename, data):
             f.write(f'\t\t\t\t<{item_name}>{item_value}</{item_name}>\n')
         f.write("\t\t\t</car>\n")
 
-    # for row, item in enumerate(data):
-    #     f.write("\t\t\t<car>\n")
-    #     f.write(f'\t\t\t\t<folder_id>{item["folder_id"]}</folder_id>\n')
-    #     f.write(f'\t\t\t\t<modification_id>{item["modification_id"]}</modification_id>\n')
-    #     f.write(f'\t\t\t\t<url>{item["url"]}</url>\n')
-    #     f.write(f'\t\t\t\t<images>{item["images"]}</images>\n')
-    #     f.write(f'\t\t\t\t<color>{item["color"]}</color>\n')
-    #     f.write(f'\t\t\t\t<vin>{item["vin"]}</vin>\n')
-    #     f.write("\t\t\t</car>\n")
 
     f.write("\n\t\t</cars>\n\t</data>\n</root>")
     f.close()
 
 def main():
-    urls = crawl_products(PAGES_COUNT)
+    print(f"Введите количество обновлений списков авто:")
+    pages_count = int(input())
+    urls = crawl_products(pages_count) # You can use global  PAGES_COUNT = 11
     data = parse_products(urls)
     dump_to_xlsx(OUT_XLSX_FILENAME, data)
     dump_to_json(OUT_JSON_FILENAME, data)
